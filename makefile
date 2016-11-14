@@ -3,7 +3,7 @@ all:
 	#javac Parametrization.java
 
 clean:
-	rm -f ImageSeg.class Parametrization.class
+	rm -f ImageSeg.class Parametrization.class log
 
 
 
