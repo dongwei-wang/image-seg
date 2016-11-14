@@ -4,7 +4,6 @@ import java.awt.image.Raster;
 import java.io.IOException;
 import javax.imageio.ImageIO;
 
-
 public class ImageSeg{
 	BufferedImage image;
 	void load(String filename) throws Exception {
@@ -12,7 +11,6 @@ public class ImageSeg{
 	}
 
 	public int[] getImagePixels() {
-
 		int [] dummy = null;
 		int width, height;
 		width = image.getWidth();
@@ -28,20 +26,16 @@ public class ImageSeg{
 		return pixelData.getPixels(0, 0, width, height, dummy);
 	}
 
-
 	public static void main(String[] args) throws IOException, Exception {
 		ImageSeg l = new ImageSeg();
 
 		l.load(args[0]);
 		int[] pixel;
 		pixel= l.getImagePixels();
-		System.out.println("length:"+pixel.length);
+		//System.out.println("length:"+pixel.length);
 
 		for(int i=0; i<pixel.length; i++){
 			System.out.println(pixel[i]);
 		}
-
 	}
-
-
 }

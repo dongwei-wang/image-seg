@@ -1,2 +1,1 @@
-#java Parametrization 
-java ImageSeg bear_small_input.png > log
+java ImageSeg imgs/bear_small_input.png
