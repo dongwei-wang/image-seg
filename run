@@ -1,0 +1,2 @@
+#java Parametrization 
+java ImageSeg bear_small_input.png > log
