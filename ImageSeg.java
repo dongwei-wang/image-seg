@@ -3,12 +3,9 @@ import java.awt.image.BufferedImage;
 import java.awt.image.Raster;
 import java.io.File;
 import java.io.IOException;
-
 import javax.imageio.ImageIO;
 import java.util.LinkedList;
 import java.util.ListIterator;
-
-
 
 // interface Parametrization{
 //     public void initialize(int img[][], int height, int width, int bg[][], int fg[][]);
@@ -16,6 +13,22 @@ import java.util.ListIterator;
 //     public double penaltyF(int x, int y);
 //     public double penaltyB(int x, int y);
 // }
+
+
+
+class LinkList_Node{
+
+	public LinkList_Node(double p, int i, int j){
+		penalty = p;
+		x = i;
+		y = j;
+	}
+
+	double penalty;
+	int x;
+	int y;
+};
+
 
 // class SomeParametrization implements Parametrization{
 //public class ImageSeg implements Parametrization{
@@ -98,23 +111,48 @@ public class ImageSeg{
 		return penalty;
 	}
 
-	public LinkedList<Double>[] createAdjLink(){
+	public LinkedList<LinkList_Node>[] createAdjLink(){
 		int nodecnt = h * w;
 
-		LinkedList<Double>[] link_array = new LinkedList[nodecnt];
-		for( int i = 0; i<nodecnt; i++ )
-			link_array[i] = new LinkedList<Double>();
+		// add start and sink node +2
+		LinkedList<LinkList_Node>[] link_array = new LinkedList[nodecnt+2];
+		for( int i = 0; i<nodecnt+2; i++ )
+			link_array[i] = new LinkedList<LinkList_Node>();
 
+		// initialize the start and sink link list
+		// check the foreground and background to initizlize the value of penalty
+		// penalty is 9999
 		for( int i=0; i<h; i++ ){
 			for( int j=0; j<w; j++ ){
-				for( int m=i; m<h; m++ ){
-					for (int n=j; n<w;n++){
-						if(penaltyP(j,i,n,m)>1e-4)
-							link_array[i*w + j].add(penaltyP(j,i,n,m));
+				// for foreground
+				if(fg[i][j] == 255){
+					LinkList_Node node = new LinkList_Node(9999,i,j);
+					link_array[0].add(node);
+				}
+				// for background
+				if( bg[i][j] == 255 ){
+					LinkList_Node node = new LinkList_Node(9999,i,j);
+					link_array[nodecnt+1].add(node);
+				}
+			}
+		}
+
+		// for the penalty of the network
+		double penalty = 0.0;
+		for( int i=0; i<h; i++ ){
+			for( int j=0; j<w; j++ ){
+				for( int m=0; m<h; m++ ){
+					for (int n=0; n<w;n++){
+						penalty = penaltyP(j,i,n,m);
+						if(penalty>1e-4){
+							LinkList_Node node = new LinkList_Node(penalty, m,n);
+							link_array[i*w + j+1].add(node);
+						}
 					}
 				}
 			}
 		}
+
 		return link_array;
 	}
 
@@ -205,7 +243,6 @@ public class ImageSeg{
 		}
 	}
 
-
 	public void displayArray(){
 		System.out.println("fgHist value");
 		for( int i=0; i<256; i++ ){
@@ -222,7 +259,7 @@ public class ImageSeg{
 		}
 	}
 
-
+	// display the penalty matrix of F and P
 	public void displayMatrix(double [][] matrix){
 		for( int i = 0; i<matrix.length; i++ ){
 			for ( int j = 0; j<matrix[0].length; j++ ){
@@ -232,6 +269,16 @@ public class ImageSeg{
 		}
 	}
 
+	// display the linked list
+	public void displayLinkedList(LinkedList<LinkList_Node>[] linklist){
+		for( int i = 0; i<linklist.length; i++ ){
+			ListIterator<LinkList_Node> listIterator = linklist[i].listIterator();
+			while (listIterator.hasNext()) {
+				System.out.format("%10.4f",listIterator.next().penalty);
+			}
+			System.out.format("%n");
+		}
+	}
 
 	public static void main(String[] args) throws IOException, Exception{
 		System.out.println("This is the program to process image");
@@ -249,33 +296,22 @@ public class ImageSeg{
 		// image_seg.displayImagePixels(bgin_pixel, args[2]);
 
 		image_seg.initialize(img_pixel, img_pixel.length, img_pixel[0].length, fgin_pixel, bgin_pixel);
-
-		image_seg.Edmonds_Karp_Solve(fgout_pixel, bgout_pixel, img_pixel.length, img_pixel[0].length );
-
-		LinkedList<Double>[] adj_link = image_seg.createAdjLink();
+		LinkedList<LinkList_Node>[] adj_link = image_seg.createAdjLink();
 		double [][] matrixF = image_seg.createMatrixPenaltyF();
 		double [][] matrixB = image_seg.createMatrixPenaltyB();
+		image_seg.Edmonds_Karp_Solve(fgout_pixel, bgout_pixel, img_pixel.length, img_pixel[0].length );
 
-		// for( int i = 0; i<adj_link.length; i++ ){
-		//     //System.out.format("This is node %4d\n", i);
-		//     ListIterator<Double> listIterator = adj_link[i].listIterator();
-		//     while (listIterator.hasNext()) {
-		//         System.out.format("%10.4f",listIterator.next());
-		//     }
-		//     System.out.format("%n");
-		// }
-
-
+		System.out.println("This is the adjency list");
+		image_seg.displayLinkedList(adj_link);
 		//System.out.println("This is the matrix of penalty F");
-		image_seg.displayMatrix(matrixF);
+		//image_seg.displayMatrix(matrixF);
 		//System.out.println("This is the matrix of penalty B");
-		image_seg.displayMatrix(matrixB);
+		//image_seg.displayMatrix(matrixB);
 
 		image_seg.writeImagePixels(args[3], fgout_pixel);
 		image_seg.writeImagePixels(args[4], bgout_pixel);
 	}
 }
-
 
 /* main() skeleton:
 
