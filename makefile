@@ -1,5 +1,5 @@
 all:
-	javac ImageSeg.java
+	javac -Xlint ImageSeg.java
 
 clean:
 	rm -f ImageSeg.class Parametrization.class log

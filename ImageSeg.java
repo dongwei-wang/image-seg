@@ -6,6 +6,7 @@ import java.io.IOException;
 
 import javax.imageio.ImageIO;
 import java.util.LinkedList;
+import java.util.ListIterator;
 
 
 
@@ -20,8 +21,11 @@ import java.util.LinkedList;
 //public class ImageSeg implements Parametrization{
 public class ImageSeg{
 	int img[][]=null;
-	double h=-1;
-	double w=-1;
+	// double h=-1;
+	// double w=-1;
+	int h = 0;
+	int w = 0;
+
 	int bg[][]=null;
 	int fg[][]=null;
 
@@ -94,26 +98,25 @@ public class ImageSeg{
 		return penalty;
 	}
 
+	public LinkedList<Double>[] createAdjLink(){
+		int nodecnt = h * w;
 
-	public LinkedList<Double>[] crateAdjLink(int height, int width){
-		int nodecnt = height * width;
+		//@SupressWarning("unchecked")
+		LinkedList<Double>[] link_array = new LinkedList[nodecnt];
+		for( int i = 0; i<nodecnt; i++ )
+			link_array[i] = new LinkedList<Double>();
 
-		LinkedList<Double>[] adjLink = new LinkedList<Double>[nodecnt];
-		// for( int i = 0; i<nodecnt; i++ )
-		//     adjLink[i] = new LinkedList<Integer>();
-
-		for( int i=0; i<height; i++ ){
-			for( int j=0; j<width; j++ ){
-				for( int m=i+1; m<height; m++ ){
-					for (int n=j+1; n<width;n++){
-						if(penaltyP(i,j,m,n)>1e-6)
-							adjLink[i*width + j].add(penaltyP(i,j,m,n));
+		for( int i=0; i<h; i++ ){
+			for( int j=0; j<w; j++ ){
+				for( int m=i+1; m<h; m++ ){
+					for (int n=j+1; n<w;n++){
+						if(penaltyP(j,i,n,m)>1e-6)
+							link_array[i*w + j].add(penaltyP(j,i,n,m));
 					}
 				}
 			}
 		}
-
-		return adjLink;
+		return link_array;
 	}
 
 
@@ -216,6 +219,15 @@ public class ImageSeg{
 		image_seg.initialize(img_pixel, img_pixel.length, img_pixel[0].length, fgin_pixel, bgin_pixel);
 
 		image_seg.Edmonds_Karp_Solve(fgout_pixel, bgout_pixel, img_pixel.length, img_pixel[0].length );
+
+		LinkedList<Double>[] adj_link = image_seg.createAdjLink();
+
+		for( int i = 0; i<adj_link.length; i++ ){
+			ListIterator<Double> listIterator = adj_link[i].listIterator();
+			while (listIterator.hasNext()) {
+				System.out.println(listIterator.next());
+			}
+		}
 
 		image_seg.writeImagePixels(args[3], fgout_pixel);
 		image_seg.writeImagePixels(args[4], bgout_pixel);
