@@ -1,2 +1,2 @@
 #java ImageSeg imgs/bear_small_input.png imgs/bear_small_inputFG.png imgs/bear_small_inputBG.png > log
-java ImageSeg imgs/bear_small_input.png imgs/bear_small_inputFG.png imgs/bear_small_inputBG.png > log
+java ImageSeg imgs/bear_small_input.png imgs/bear_small_inputFG.png imgs/bear_small_inputBG.png output/bear_fg_output.png output/bear_bg_output.png

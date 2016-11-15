@@ -15,7 +15,6 @@ import javax.imageio.ImageIO;
 // class SomeParametrization implements Parametrization{
 //public class ImageSeg implements Parametrization{
 public class ImageSeg{
-
 	int img[][]=null;
 	double h=-1;
 	double w=-1;
@@ -33,7 +32,7 @@ public class ImageSeg{
 	double dThreshold=3;
 	double distExpConst=100.0;
 
-	public void initialize(int img[][], int height, int width, int bg[][], int fg[][]){
+	public void initialize(int img[][], int height, int width, int fg[][], int bg[][]){
 	// img[0...height-1][0...width-1], same for fg and bg
 	// i.e. first index is Y, second index is X
 		this.img=img;
@@ -91,11 +90,11 @@ public class ImageSeg{
 		return penalty;
 	}
 
-	public void solver(){
+	public void Edmonds_Karp_Solve(int[][] fgout, int[][] bgout, int imH, int imW ){
 
 	}
 
-	public int[][] getImagePixels(String filename) throws Exception{
+	public int[][] readImagePixels(String filename) throws Exception{
 		//BufferedImage image = ImageIO.read(getClass().getResourceAsStream(filename));
 		BufferedImage image = ImageIO.read(new File(filename));
 
@@ -126,13 +125,26 @@ public class ImageSeg{
 		return two_d_pixels;
 	}
 
+
+	public void writeImagePixels(String filename, int [][] pixels) throws Exception{
+		BufferedImage img_buf = new BufferedImage( pixels[0].length, pixels.length, BufferedImage.TYPE_BYTE_GRAY);
+		for( int i = 0; i<pixels[0].length; i++){
+			for(int j = 0; j<pixels.length; j++){
+				//img_buf.setRGB(i,j, (pixels[i][j]<<16)|(pixels[i][j]<<8)|pixels[i][j]);
+				img_buf.setRGB(i,j, 0xffffff);
+			}
+		}
+
+		ImageIO.write(img_buf, "png", new File(filename));
+	}
+
 	// display the value of each pixel in the image
 	public void displayImagePixels(int [][] pixels, String filename) {
 		System.out.println(filename);
 
 		// get the height of the two dimension array
 		int height = pixels.length;
-		// get the width of the two dimension array
+		// get the width of the two dimension array int width = pixels[0].length;
 		int width = pixels[0].length;
 
 		System.out.format("The height is: %d, width is %d\n",height, width );
@@ -144,20 +156,45 @@ public class ImageSeg{
 		}
 	}
 
+
+	public void displayArray(){
+		System.out.println("fgHist value");
+		for( int i=0; i<256; i++ ){
+			System.out.format("%4d", fgHist[i]);
+			if( (i+1)%32 == 0 )
+				System.out.format("%n");
+		}
+
+		System.out.println("bgHist value");
+		for( int i=0; i<256; i++ ){
+			System.out.format("%4d", bgHist[i]);
+			if( (i+1)%32 == 0 )
+				System.out.format("%n");
+		}
+	}
+
 	public static void main(String[] args) throws IOException, Exception{
 		System.out.println("This is the program to process image");
 
 		ImageSeg image_seg = new ImageSeg();
-		int[][] img_pixel, fgin_pixel, bgin_pixel, fgout_pixel, bgout_pixel;
-		img_pixel	= image_seg.getImagePixels(args[0]);
-		fgin_pixel	= image_seg.getImagePixels(args[1]);
-		bgin_pixel	= image_seg.getImagePixels(args[2]);
+		int [][] img_pixel, fgin_pixel, bgin_pixel;
+		int [][] fgout_pixel = new int[46][69];
+		int [][] bgout_pixel = new int[46][69];
+		img_pixel	= image_seg.readImagePixels(args[0]);
+		fgin_pixel	= image_seg.readImagePixels(args[1]);
+		bgin_pixel	= image_seg.readImagePixels(args[2]);
 
-		image_seg.displayImagePixels(img_pixel,	args[0]);
-		image_seg.displayImagePixels(fgin_pixel, args[1]);
-		image_seg.displayImagePixels(bgin_pixel, args[2]);
+		// image_seg.displayImagePixels(img_pixel,	args[0]);
+		// image_seg.displayImagePixels(fgin_pixel, args[1]);
+		// image_seg.displayImagePixels(bgin_pixel, args[2]);
+
+		image_seg.initialize(img_pixel, img_pixel.length, img_pixel[0].length, fgin_pixel, bgin_pixel);
+
+		image_seg.Edmonds_Karp_Solve(fgout_pixel, bgout_pixel, img_pixel.length, img_pixel[0].length );
+
+		image_seg.writeImagePixels(args[3], fgout_pixel);
+		image_seg.writeImagePixels(args[4], bgout_pixel);
 	}
-
 }
 
 
