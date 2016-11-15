@@ -101,22 +101,43 @@ public class ImageSeg{
 	public LinkedList<Double>[] createAdjLink(){
 		int nodecnt = h * w;
 
-		//@SupressWarning("unchecked")
 		LinkedList<Double>[] link_array = new LinkedList[nodecnt];
 		for( int i = 0; i<nodecnt; i++ )
 			link_array[i] = new LinkedList<Double>();
 
 		for( int i=0; i<h; i++ ){
 			for( int j=0; j<w; j++ ){
-				for( int m=i+1; m<h; m++ ){
-					for (int n=j+1; n<w;n++){
-						if(penaltyP(j,i,n,m)>1e-6)
+				for( int m=i; m<h; m++ ){
+					for (int n=j; n<w;n++){
+						if(penaltyP(j,i,n,m)>1e-4)
 							link_array[i*w + j].add(penaltyP(j,i,n,m));
 					}
 				}
 			}
 		}
 		return link_array;
+	}
+
+
+	public double [][] createMatrixPenaltyF(){
+		double [][] matrix = new double[h][w];
+		for( int i= 0; i<h; i++ ){
+			for( int j=0; j<w; j++ ){
+				matrix[i][j] = penaltyF(j,i);
+			}
+		}
+		return matrix;
+	}
+
+
+	public double [][] createMatrixPenaltyB(){
+		double [][] matrix = new double[h][w];
+		for( int i=0; i<h; i++ ){
+			for( int j=0; j<w; j++ ){
+				matrix[i][j] = penaltyB(j,i);
+			}
+		}
+		return matrix;
 	}
 
 
@@ -201,6 +222,17 @@ public class ImageSeg{
 		}
 	}
 
+
+	public void displayMatrix(double [][] matrix){
+		for( int i = 0; i<matrix.length; i++ ){
+			for ( int j = 0; j<matrix[0].length; j++ ){
+				System.out.format("%4.2f", matrix[i][j]);
+			}
+			System.out.format("%n");
+		}
+	}
+
+
 	public static void main(String[] args) throws IOException, Exception{
 		System.out.println("This is the program to process image");
 
@@ -221,13 +253,23 @@ public class ImageSeg{
 		image_seg.Edmonds_Karp_Solve(fgout_pixel, bgout_pixel, img_pixel.length, img_pixel[0].length );
 
 		LinkedList<Double>[] adj_link = image_seg.createAdjLink();
+		double [][] matrixF = image_seg.createMatrixPenaltyF();
+		double [][] matrixB = image_seg.createMatrixPenaltyB();
 
-		for( int i = 0; i<adj_link.length; i++ ){
-			ListIterator<Double> listIterator = adj_link[i].listIterator();
-			while (listIterator.hasNext()) {
-				System.out.println(listIterator.next());
-			}
-		}
+		// for( int i = 0; i<adj_link.length; i++ ){
+		//     //System.out.format("This is node %4d\n", i);
+		//     ListIterator<Double> listIterator = adj_link[i].listIterator();
+		//     while (listIterator.hasNext()) {
+		//         System.out.format("%10.4f",listIterator.next());
+		//     }
+		//     System.out.format("%n");
+		// }
+
+
+		//System.out.println("This is the matrix of penalty F");
+		image_seg.displayMatrix(matrixF);
+		//System.out.println("This is the matrix of penalty B");
+		image_seg.displayMatrix(matrixB);
 
 		image_seg.writeImagePixels(args[3], fgout_pixel);
 		image_seg.writeImagePixels(args[4], bgout_pixel);
