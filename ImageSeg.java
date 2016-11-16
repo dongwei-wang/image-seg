@@ -30,15 +30,18 @@ void solve(Parametrization params, int fgOut[][],int bgOut[][],int h, int w)
 
 */
 
+/*
+ * Autho: Dongwei Wang
+ * Email: wdw828@gmail.com
+ * Date: Nov 16th, 2016
+ */
 
-import java.awt.Dimension;
 import java.awt.image.BufferedImage;
 import java.awt.image.Raster;
 import java.io.File;
 import java.io.IOException;
 import javax.imageio.ImageIO;
 import java.util.LinkedList;
-import java.util.ListIterator;
 import java.util.Queue;
 
 class Node{
@@ -51,11 +54,9 @@ class Node{
 	int nodeidx;
 };
 
-
 // class SomeParametrization implements Parametrization{
 //public class ImageSeg implements Parametrization{
 public class ImageSeg{
-
 	private static final int INFINITY = 9999;
 	private static final double D_INF = 9999.00;
 	private static final int MAX_VAL_BYTE = 255;
@@ -145,7 +146,6 @@ public class ImageSeg{
 
 		// initialize the start and sink link list
 		// check the foreground and background to initizlize the value of penalty
-		// penalty is INFINITY
 
 		// for the penalty of the network
 		double penalty = 0.0;
@@ -200,9 +200,8 @@ public class ImageSeg{
 		return matrix;
 	}
 
+	// find the source and sink for bfs searching
 	public int[] findSrcAndSnkOfBFS(LinkedList<Node>[] residualnet){
-		// int[0]: represts the start point
-		// int[1]: represets the end point
 		int length = residualnet.length;
 		int [] array = new int[2];
 		double[] inflow = new double[length];
@@ -285,25 +284,24 @@ public class ImageSeg{
 		return sp;
 	}
 
-	public double findMinCapacity(LinkedList<Node>[] residualnet, LinkedList<Integer> sp){
-		double min_c = D_INF;
+	public double Find_Max_Flow(LinkedList<Node>[] residualnet, LinkedList<Integer> sp){
+		double max_flow = D_INF;
 		int v1 = 0;
 		int v2 = 0;
-
 		for( int i= 0; i<sp.size()-1; i++ ){
 			v1 = sp.get(i);
 			v2 = sp.get(i+1);
 			for( int j = 0; j<residualnet[v1].size();j++ ){
-				if(residualnet[v1].get(j).nodeidx == v2 && residualnet[v1].get(j).penalty<min_c){
-					min_c = residualnet[v1].get(j).penalty;
+				if(residualnet[v1].get(j).nodeidx == v2 && residualnet[v1].get(j).penalty<max_flow){
+					max_flow = residualnet[v1].get(j).penalty;
 				}
 			}
 		}
-
-		return min_c;
+		return max_flow;
 	}
 
-	public void adjustresidualnet(LinkedList<Node>[] residualnet, double[][] flownet, LinkedList<Integer> sp, double min_capacity){
+	// adjust the value of each edges in residual network
+	public void adjust_residual_network(LinkedList<Node>[] residualnet, LinkedList<Integer> sp, double min_capacity){
 		int v1 = -1;
 		int v2 = -1;
 		for( int i=0; i<sp.size()-1; i++ ){
@@ -327,16 +325,16 @@ public class ImageSeg{
 					residualnet[v2].get(k).penalty += min_capacity;
 				}
 			}
-			flownet[v1][v2] += min_capacity;
-			flownet[v2][v1] -= min_capacity;
 		}
 	}
 
-
-	public void findForeGround(LinkedList<Node>[] residualnet, int[][] fgout, int [][] bgout){
-
+	// set the pixesl of foreground and background
+	// write the value to foreground and background files
+	public void Set_Pixels(LinkedList<Node>[] residualnet, int[][] fgout, int [][] bgout){
 		int nodecnt = residualnet.length;
-		boolean [] visited	= new boolean[nodecnt]; // flag: if current node visited or not
+
+		// flag: if current node visited or not
+		boolean [] visited	= new boolean[nodecnt];
 
 		// initialize the variables
 		for( int i= 0; i<nodecnt; i++ ){
@@ -376,9 +374,9 @@ public class ImageSeg{
 				bgout[m][n] = 0;
 			}
 		}
-
 	}
 
+	// output the shortest path information
 	public void displaySP(LinkedList<Integer> sp){
 		System.out.format("Shortest path: ");
 		for( int i=0; i<sp.size(); i++){
@@ -387,19 +385,19 @@ public class ImageSeg{
 		System.out.format("%n");
 	}
 
+	// Edmonds Karp algorithm
 	public void Edmonds_Karp_Solve(int[][] fgout, int[][] bgout, int imH, int imW, LinkedList<Node>[] residualnet ){
+		// source and sink for each bfs searching
 		int [] src_sink = new int[2];
 		LinkedList<Integer> shortestPath = new LinkedList<Integer>();
 
 		// node count
 		int nodecnt = residualnet.length;
-		// flow network
-		double [][] flownet = new double[nodecnt][nodecnt];
 
+		// minimum capacity in each shortest path
 		double sp_capacity = D_INF;
 
 		// find the source and sink
-		int shortestcnt = 0;
 		double maxflow = 0.0;
 		while(true){
 			src_sink[0] = -1;
@@ -409,27 +407,29 @@ public class ImageSeg{
 			// start the bfs to find a path
 			shortestPath.clear();
 			shortestPath = BFS(residualnet, src_sink[0], src_sink[1], sp_capacity);
-			shortestcnt++;
 			displaySP(shortestPath);
 
+			// do not find any shortest path by bfs
 			if( shortestPath.size() <= 1){
+				System.out.println("No any augmenting path");
 				break;
 			}
 
-			sp_capacity = D_INF;
-
-			sp_capacity = findMinCapacity(residualnet, shortestPath);
+			// find the minimum penalty in each shortest path
+			sp_capacity = Find_Max_Flow(residualnet, shortestPath);
+			// acculumate maxflow
 			maxflow += sp_capacity;
 			System.out.format("Min capacity is %10.4f\n",sp_capacity);
-			adjustresidualnet(residualnet, flownet, shortestPath, sp_capacity);
+			// adjust residual network
+			adjust_residual_network(residualnet, shortestPath, sp_capacity);
 		}
 
 		System.out.format("The Maximum Flow is %10.4f", maxflow);
 		System.out.format("%n");
-		findForeGround(residualnet, fgout, bgout);
+		Set_Pixels(residualnet, fgout, bgout);
 	}
 
-	public int[][] readImagePixels(String filename) throws Exception{
+	public int[][] Read_Image_Pixels(String filename) throws Exception{
 		//BufferedImage image = ImageIO.read(getClass().getResourceAsStream(filename));
 		BufferedImage image = ImageIO.read(new File(filename));
 
@@ -460,7 +460,7 @@ public class ImageSeg{
 		return two_d_pixels;
 	}
 
-	public void writeImagePixels(String filename, int [][] pixels) throws Exception{
+	public void Write_Image_Pixels(String filename, int [][] pixels) throws Exception{
 		BufferedImage img_buf = new BufferedImage( pixels[0].length, pixels.length, BufferedImage.TYPE_BYTE_GRAY);
 		for( int i = 0; i<pixels[0].length; i++){
 			for(int j = 0; j<pixels.length; j++){
@@ -520,7 +520,6 @@ public class ImageSeg{
 		for( int i = 0; i<linklist.length; i++ ){
 			for( int j=0; j<linklist[i].size();j++ ){
 				Node linklist_node = linklist[i].get(j);
-				//System.out.format("%10.4f", linklist_node.penalty);
 				System.out.format("%10.4f-->%4d", linklist_node.penalty, linklist_node.nodeidx);
 			}
 			System.out.format("%n");
@@ -533,9 +532,9 @@ public class ImageSeg{
 
 		ImageSeg image_seg = new ImageSeg();
 		int [][] img_pixel, fgin_pixel, bgin_pixel;
-		img_pixel	= image_seg.readImagePixels(args[0]);
-		fgin_pixel	= image_seg.readImagePixels(args[1]);
-		bgin_pixel	= image_seg.readImagePixels(args[2]);
+		img_pixel	= image_seg.Read_Image_Pixels(args[0]);
+		fgin_pixel	= image_seg.Read_Image_Pixels(args[1]);
+		bgin_pixel	= image_seg.Read_Image_Pixels(args[2]);
 
 		int height = img_pixel.length;
 		int width = img_pixel[0].length;
@@ -543,6 +542,8 @@ public class ImageSeg{
 		int [][] fgout_pixel = new int[height][width];
 		int [][] bgout_pixel = new int[height][width];
 
+		// set all the values in bgout_pixel to 1
+		// so that to write to file
 		for( int i= 0; i<height; i++ ){
 			for( int j= 0; j<width; j++ ){
 				bgout_pixel[i][j] = 1;
@@ -563,8 +564,8 @@ public class ImageSeg{
 		image_seg.Edmonds_Karp_Solve(fgout_pixel, bgout_pixel, img_pixel.length, img_pixel[0].length, adj_link );
 
 		// write the picture into file
-		image_seg.writeImagePixels(args[3], fgout_pixel);
-		image_seg.writeImagePixels(args[4], bgout_pixel);
+		image_seg.Write_Image_Pixels(args[3], fgout_pixel);
+		image_seg.Write_Image_Pixels(args[4], bgout_pixel);
 		System.out.println("******************");
 	}
 }

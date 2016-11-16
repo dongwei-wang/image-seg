@@ -1,9 +1,3 @@
-# java ImageSeg imgs/bear_small_input.png imgs/bear_small_inputFG.png imgs/bear_small_inputBG.png output/bear_fg_output.png output/bear_bg_output.png
-#java ImageSeg imgs/grain_small_input.png imgs/grain_small_inputFG.png imgs/grain_small_inputBG.png output/grain_fg_output.png output/grain_bg_output.png
-#java ImageSeg imgs/ski_small_input.png imgs/ski_small_inputFG.png imgs/ski_small_inputBG.png output/ski_fg_output.png output/ski_bg_output.png
-#java ImageSeg imgs/tigerNoise_small_input.png imgs/tigerNoise_small_inputFG.png imgs/tigerNoise_small_inputBG.png output/tigerNoise_fg_output.png output/tigerNoise_bg_output.png
-#java ImageSeg imgs/vegNoise_small_input.png imgs/vegNoise_small_inputFG.png imgs/vegNoise_small_inputBG.png output/vegNoise_fg_output.png output/vegNoise_bg_output.png
-
 java ImageSeg imgs/bear_small_input.png imgs/bear_small_inputFG.png imgs/bear_small_inputBG.png output/bear_fg_output.png output/bear_bg_output.png > bear
 java ImageSeg imgs/grain_small_input.png imgs/grain_small_inputFG.png imgs/grain_small_inputBG.png output/grain_fg_output.png output/grain_bg_output.png > grain
 java ImageSeg imgs/ski_small_input.png imgs/ski_small_inputFG.png imgs/ski_small_inputBG.png output/ski_fg_output.png output/ski_bg_output.png > ski
