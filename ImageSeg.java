@@ -1,3 +1,37 @@
+/*
+ main() skeleton:
+
+usage: java segment img.png fgIn.png bgIn.png fgOut.png bgOut.png
+
+1) read images into img[][], fgIn[][] bgIn[][] from .png files;
+1a) all three images should have the same dimensions, imH * imW (determine what imH, imW is)
+1b) img[y][x] should be in range from 0 (black) to 255 (white)
+1c) fgIn[y][x] should have 255 (white) for "likely" foreground, 0 (black) for the rest (unknown status)
+1d) bgIn[y][x] should have 255 (white) for "likely" background, 0 (black) for the rest (unknown status)
+
+2) create a parameterization object based on the image, foreground, and background, and img dimensions, e.g.
+myParam=new SomeParametrization();myParam.initialize(img, imH, imW, fgIn, bgIn);
+
+3) use the solver (which is the main objective of this homework project) to obtain fgOut and bgOut, e.g.
+3a) allocate fgOut, bgOut 2D arrays (h x w)
+3b) call  solve(myParam,fgOut,bgOut,imH,imW);
+
+4) write fgOut bgOut to .png files
+
+ solver skeleton:
+// designing and implementing the solver is the main objective of this project assignment!
+void solve(Parametrization params, int fgOut[][],int bgOut[][],int h, int w)
+1) use the input arguments (parametrization, h, w), to form a flow network (i.e. use penaltyF(), penaltyB(), penaltyP() as source of penalty values for each pixel or pixel pair
+2) solve the max flow/min cut problem by implementing e.g. Edmonds-Karp algorithm we covered in class
+3) recover the min cut from max flow solution, fill out the output arguments (fgOut and bgOut) based on it
+3a) fgOut[y][x] = 255 (white) if pixel (x,y) is in foreground, fgOut[y][x]=0 otherwise
+3b) bgOut[y][x] = 255 (white) if pixel (x,y) is in background, bgOut[y][x]=0 otherwise
+3c) in the output, you should always have: fgOut[y][x]+bgOut[y][x]==255  (every pixel is classified as either foreground or background)
+
+*/
+
+
+
 import java.awt.Dimension;
 import java.awt.image.BufferedImage;
 import java.awt.image.Raster;
@@ -6,6 +40,8 @@ import java.io.IOException;
 import javax.imageio.ImageIO;
 import java.util.LinkedList;
 import java.util.ListIterator;
+import java.util.Queue;
+//import java.util.Tuple;
 
 // interface Parametrization{
 //     public void initialize(int img[][], int height, int width, int bg[][], int fg[][]);
@@ -16,23 +52,25 @@ import java.util.ListIterator;
 
 
 
-class LinkList_Node{
-
-	public LinkList_Node(double p, int i, int j){
+class Node{
+	public Node(double p, int idx){
 		penalty = p;
-		x = i;
-		y = j;
+		nodeidx = idx;
 	}
 
 	double penalty;
-	int x;
-	int y;
+	int nodeidx;
 };
 
 
 // class SomeParametrization implements Parametrization{
 //public class ImageSeg implements Parametrization{
 public class ImageSeg{
+
+	private static final int INFINITY = 9999;
+	private static final double D_INF = 9999.00;
+	private static final int MAX_VAL_BYTE = 255;
+
 	int img[][]=null;
 	// double h=-1;
 	// double w=-1;
@@ -83,7 +121,7 @@ public class ImageSeg{
 		int c1=img[y1][x1];
 		int c2=img[y2][x2];
 		double dist = Math.sqrt((x1-x2)*(x1-x2)+(y1-y2)*(y1-y2));
-		double cDiff=Math.sqrt((c1-c2)*(c1-c2))/255;
+		double cDiff=Math.sqrt((c1-c2)*(c1-c2))/MAX_VAL_BYTE;
 		double penalty=0;
 		if (dist>dThreshold)
 			penalty=0;
@@ -111,51 +149,51 @@ public class ImageSeg{
 		return penalty;
 	}
 
-	public LinkedList<LinkList_Node>[] createAdjLink(){
+	public LinkedList<Node>[] createAdjLink(){
 		int nodecnt = h * w;
-
 		// add start and sink node +2
-		LinkedList<LinkList_Node>[] link_array = new LinkedList[nodecnt+2];
+		LinkedList<Node>[] link_array = new LinkedList[nodecnt+2];
 		for( int i = 0; i<nodecnt+2; i++ )
-			link_array[i] = new LinkedList<LinkList_Node>();
+			link_array[i] = new LinkedList<Node>();
 
 		// initialize the start and sink link list
 		// check the foreground and background to initizlize the value of penalty
-		// penalty is 9999
-		for( int i=0; i<h; i++ ){
-			for( int j=0; j<w; j++ ){
-				// for foreground
-				if(fg[i][j] == 255){
-					LinkList_Node node = new LinkList_Node(9999,i,j);
-					link_array[0].add(node);
-				}
-				// for background
-				if( bg[i][j] == 255 ){
-					LinkList_Node node = new LinkList_Node(9999,i,j);
-					link_array[nodecnt+1].add(node);
-				}
-			}
-		}
+		// penalty is INFINITY
 
 		// for the penalty of the network
 		double penalty = 0.0;
 		for( int i=0; i<h; i++ ){
 			for( int j=0; j<w; j++ ){
-				for( int m=0; m<h; m++ ){
-					for (int n=0; n<w;n++){
-						penalty = penaltyP(j,i,n,m);
-						if(penalty>1e-4){
-							LinkList_Node node = new LinkList_Node(penalty, m,n);
-							link_array[i*w + j+1].add(node);
+				for( int m=i-3; m<i+3; m++ ){
+					for (int n=j-3; n<j+3;n++){
+						if(n>=0&&m>=0&&n<w&&m<h&&(m!=i||n!=j)){
+							penalty = penaltyP(j,i,n,m);
+							// Node node = new Node(penalty, m*w+n+1);
+							// link_array[i*w + j+1].add(node);
+							if( penalty >1e-2 ){
+								Node node = new Node(penalty, m*w+n+1);
+								link_array[i*w + j+1].add(node);
+							}
 						}
 					}
 				}
+
+				// for foreground
+				if(fg[i][j] == MAX_VAL_BYTE){
+					Node node = new Node(INFINITY,i*w+j+1);
+					link_array[0].add(node);
+				}
+
+				// if current node belongs to background, it connect to the sink
+				if( bg[i][j] == MAX_VAL_BYTE ){
+					// current should connect to the sink
+					Node node = new Node(INFINITY,nodecnt+1);
+					link_array[i*w+j+1].add(node);
+				}
 			}
 		}
-
 		return link_array;
 	}
-
 
 	public double [][] createMatrixPenaltyF(){
 		double [][] matrix = new double[h][w];
@@ -166,7 +204,6 @@ public class ImageSeg{
 		}
 		return matrix;
 	}
-
 
 	public double [][] createMatrixPenaltyB(){
 		double [][] matrix = new double[h][w];
@@ -179,8 +216,252 @@ public class ImageSeg{
 	}
 
 
-	public void Edmonds_Karp_Solve(int[][] fgout, int[][] bgout, int imH, int imW ){
+	public int[] findSrcAndSnkOfBFS(LinkedList<Node>[] residualnet){
+		// int[0]: represts the start point
+		// int[1]: represets the end point
+		int length = residualnet.length;
+		int [] array = new int[2];
+		double[] inflow = new double[length];
 
+		for( int i = 0; i<residualnet.length; i++ ){
+			// for a adjecent list
+			// the size is 0: there is no out flow
+			// it should be the sink
+			//System.out.format("%d", i);
+			// if(residualnet[i].size() == 0)
+			//     array[1] = i;
+			for( int j=0; j<residualnet[i].size();j++ ){
+				Node node = residualnet[i].get(j);
+				inflow[node.nodeidx] += node.penalty;
+			}
+		}
+
+		// for the node that there is no any inflow
+		// it should be the start point for bfs
+		for( int i=0; i<length; i++ ){
+			if((inflow[i] == 0)&&(residualnet[i].size()!=0))
+				array[0] = i;
+
+			if( (inflow[i] != 0 )&& (residualnet[i].size() == 0 ))
+				array[1] = i;
+		}
+
+		// System.out.format("src: %4d ---> snk: %4d", array[0], array[1]);
+		// System.out.format("%n");
+
+		return array;
+	}
+
+	public LinkedList<Integer> BFS(LinkedList<Node>[] residualnet, int src, int sink, double min_capacity){
+		// number of nodes in the flow network
+		int nodecnt = residualnet.length;
+
+		// variables to store the information of shortest path
+		double [] weight	= new double[nodecnt]; // store the weight of the weight
+		int [] predecessor	= new int[nodecnt]; // store the predecessor of current node
+		boolean [] visited	= new boolean[nodecnt]; // flag: if current node visited or not
+
+		// initialize the variables
+		for( int i= 0; i<nodecnt; i++ ){
+			weight[i] = D_INF;
+			predecessor[i] = -1;
+			visited[i] = false;
+		}
+
+		Queue<Integer> queue = new LinkedList<Integer>();
+		queue.offer(src);
+
+		while(queue.peek() != null){
+			int source = queue.remove();
+			LinkedList<Node> neighbours = residualnet[source];
+			if(neighbours.size() > 0){
+				for(int j = 0; j<residualnet[source].size(); j++){
+					Node node = residualnet[source].get(j);
+					int nodeidx = node.nodeidx;
+					//System.out.format("node idex %4d\n", nodeidx);
+					if( !visited[nodeidx] ){
+						// System.out.format("Add node %4d\n", j);
+						visited[nodeidx] = true;
+						weight[nodeidx] = node.penalty;
+						predecessor[nodeidx] = source;
+						queue.offer(nodeidx);
+					}
+				}
+			}
+			// set the source as visited
+			visited[source] = true;
+		}
+
+		//System.out.println("Dongwei: "+ min_capacity);
+		//double sp_capacity = D_INF;
+		LinkedList<Integer> reverse_sp = new LinkedList<Integer>();
+		reverse_sp.add(sink);
+		int pred = sink;
+		while( predecessor[pred] != -1){
+			reverse_sp.add(predecessor[pred]);
+			pred = predecessor[pred];
+			// if( weight[pred]<min_capacity )
+			//     min_capacity = weight[pred];
+		}
+
+		LinkedList<Integer> sp = new LinkedList<Integer>();
+		for(int i = reverse_sp.size()-1; i>=0; i--)
+			sp.add(reverse_sp.get(i));
+
+		return sp;
+	}
+
+	public double findMinCapacity(LinkedList<Node>[] residualnet, LinkedList<Integer> sp){
+		double min_c = D_INF;
+		int v1 = 0;
+		int v2 = 0;
+
+		for( int i= 0; i<sp.size()-1; i++ ){
+			v1 = sp.get(i);
+			v2 = sp.get(i+1);
+			for( int j = 0; j<residualnet[v1].size();j++ ){
+				if(residualnet[v1].get(j).nodeidx == v2 && residualnet[v1].get(j).penalty<min_c){
+					min_c = residualnet[v1].get(j).penalty;
+				}
+			}
+		}
+
+		return min_c;
+	}
+
+	public void adjustresidualnet(LinkedList<Node>[] residualnet, double[][] flownet, LinkedList<Integer> sp, double min_capacity){
+		int v1 = -1;
+		int v2 = -1;
+		for( int i=0; i<sp.size()-1; i++ ){
+			v1 = sp.get(i);
+			v2 = sp.get(i+1);
+			// System.out.format("%4d---> %4d",v1, v2);
+			// System.out.format("%n");
+			for( int j = 0; j<residualnet[v1].size(); j++ ){
+				if( residualnet[v1].get(j).nodeidx == v2 ){
+					System.out.format("%4d--->%4d: %10.4f", v1, v2, residualnet[v1].get(j).penalty);
+					System.out.format("%n");
+					residualnet[v1].get(j).penalty -= min_capacity;
+
+					// if the capacity of current node become 0
+					// remove it
+					if(residualnet[v1].get(j).penalty == 0)
+						residualnet[v1].remove(j);
+				}
+			}
+
+			for( int k = 0; k<residualnet[v2].size(); k++ ){
+				if(residualnet[v2].get(k).nodeidx == v1 ){
+					// System.out.format("%4d--->%4d: %10.4f", v2, v1, residualnet[v2].get(k).penalty);
+					// System.out.format("%n");
+					residualnet[v2].get(k).penalty += min_capacity;
+				}
+			}
+			flownet[v1][v2] += min_capacity;
+			flownet[v2][v1] -= min_capacity;
+		}
+	}
+
+
+	public void findForeGround(LinkedList<Node>[] residualnet, int[][] fgout, int [][] bgout){
+
+		int nodecnt = residualnet.length;
+		boolean [] visited	= new boolean[nodecnt]; // flag: if current node visited or not
+
+		// initialize the variables
+		for( int i= 0; i<nodecnt; i++ ){
+			visited[i] = false;
+		}
+
+		LinkedList<Integer> foreGrdPxl = new LinkedList<Integer>();
+		Queue<Integer> queue = new LinkedList<Integer>();
+		foreGrdPxl.add(0);
+		queue.offer(0);
+
+		while(queue.peek() != null){
+			int source = queue.remove();
+			LinkedList<Node> neighbours = residualnet[source];
+			if(neighbours.size() > 0){
+				for(int j = 0; j<residualnet[source].size(); j++){
+					Node node = residualnet[source].get(j);
+					int nodeidx = node.nodeidx;
+					//System.out.format("node idex %4d\n", nodeidx);
+					if( !visited[nodeidx] ){
+						// System.out.format("Add node %4d\n", j);
+						visited[nodeidx] = true;
+						queue.offer(nodeidx);
+						foreGrdPxl.add(nodeidx);
+					}
+				}
+			}
+			// set the source as visited
+			visited[source] = true;
+		}
+
+		int m=0;
+		int n=0;
+		for( int i=0; i<foreGrdPxl.size(); i++ ){
+			if(foreGrdPxl.get(i)>0){
+				m = ((foreGrdPxl.get(i)-1)/w)%w;
+				n = (foreGrdPxl.get(i)-1)%w;
+				fgout[m][n] = 1;
+				bgout[m][n] = 0;
+			}
+		}
+
+	}
+
+	public void displaySP(LinkedList<Integer> sp){
+		System.out.format("Shortest path: ");
+		for( int i=0; i<sp.size(); i++){
+			System.out.format("%4d--->", sp.get(i));
+		}
+		System.out.format("%n");
+	}
+
+	public void Edmonds_Karp_Solve(int[][] fgout, int[][] bgout, int imH, int imW, LinkedList<Node>[] residualnet ){
+		int [] src_sink = new int[2];
+		LinkedList<Integer> shortestPath = new LinkedList<Integer>();
+
+		// node count
+		int nodecnt = residualnet.length;
+		// flow network
+		double [][] flownet = new double[nodecnt][nodecnt];
+
+		double sp_capacity = D_INF;
+
+		// find the source and sink
+		int shortestcnt = 0;
+		double maxflow = 0.0;
+		while(true){
+			src_sink[0] = -1;
+			src_sink[1] = -1;
+			src_sink = findSrcAndSnkOfBFS(residualnet);
+
+			// System.out.format("src: %4d ---> snk: %4d", src_sink[0], src_sink[1]);
+			// System.out.format("%n");
+
+			// start the bfs to find a path
+			shortestPath.clear();
+			shortestPath = BFS(residualnet, src_sink[0], src_sink[1], sp_capacity);
+			shortestcnt++;
+			displaySP(shortestPath);
+
+			if( shortestPath.size() <= 1){
+				break;
+			}
+
+			sp_capacity = D_INF;
+
+			sp_capacity = findMinCapacity(residualnet, shortestPath);
+			maxflow += sp_capacity;
+			System.out.format("Min capacity is %10.4f\n",sp_capacity);
+			adjustresidualnet(residualnet, flownet, shortestPath, sp_capacity);
+		}
+
+		System.out.format("The Maximum Flow is %10.4f", maxflow);
+		System.out.format("%n");
+		findForeGround(residualnet, fgout, bgout);
 	}
 
 	public int[][] readImagePixels(String filename) throws Exception{
@@ -218,8 +499,8 @@ public class ImageSeg{
 		BufferedImage img_buf = new BufferedImage( pixels[0].length, pixels.length, BufferedImage.TYPE_BYTE_GRAY);
 		for( int i = 0; i<pixels[0].length; i++){
 			for(int j = 0; j<pixels.length; j++){
-				//img_buf.setRGB(i,j, (pixels[i][j]<<16)|(pixels[i][j]<<8)|pixels[i][j]);
-				img_buf.setRGB(i,j, 0xffffff);
+				if(pixels[j][i] == 1)
+					img_buf.setRGB(i,j, 0xffffff);
 			}
 		}
 		ImageIO.write(img_buf, "png", new File(filename));
@@ -270,78 +551,58 @@ public class ImageSeg{
 	}
 
 	// display the linked list
-	public void displayLinkedList(LinkedList<LinkList_Node>[] linklist){
+	public void displayLinkedList(LinkedList<Node>[] linklist){
 		for( int i = 0; i<linklist.length; i++ ){
-			ListIterator<LinkList_Node> listIterator = linklist[i].listIterator();
-			while (listIterator.hasNext()) {
-				System.out.format("%10.4f",listIterator.next().penalty);
+			for( int j=0; j<linklist[i].size();j++ ){
+				Node linklist_node = linklist[i].get(j);
+				//System.out.format("%10.4f", linklist_node.penalty);
+				System.out.format("%10.4f-->%4d", linklist_node.penalty, linklist_node.nodeidx);
 			}
 			System.out.format("%n");
 		}
 	}
 
 	public static void main(String[] args) throws IOException, Exception{
-		System.out.println("This is the program to process image");
+		System.out.println("******************");
+		System.out.println("This is the program to process image " + args[0]);
 
 		ImageSeg image_seg = new ImageSeg();
 		int [][] img_pixel, fgin_pixel, bgin_pixel;
-		int [][] fgout_pixel = new int[46][69];
-		int [][] bgout_pixel = new int[46][69];
 		img_pixel	= image_seg.readImagePixels(args[0]);
 		fgin_pixel	= image_seg.readImagePixels(args[1]);
 		bgin_pixel	= image_seg.readImagePixels(args[2]);
 
-		// image_seg.displayImagePixels(img_pixel,	args[0]);
-		// image_seg.displayImagePixels(fgin_pixel, args[1]);
-		// image_seg.displayImagePixels(bgin_pixel, args[2]);
+		int height = img_pixel.length;
+		int width = img_pixel[0].length;
 
+		int [][] fgout_pixel = new int[height][width];
+		int [][] bgout_pixel = new int[height][width];
+
+		for( int i= 0; i<height; i++ ){
+			for( int j= 0; j<width; j++ ){
+				bgout_pixel[i][j] = 1;
+			}
+		}
+
+		// initialize
 		image_seg.initialize(img_pixel, img_pixel.length, img_pixel[0].length, fgin_pixel, bgin_pixel);
-		LinkedList<LinkList_Node>[] adj_link = image_seg.createAdjLink();
+
+		// create adjenct list for penalty (Pij)
+		LinkedList<Node>[] adj_link = image_seg.createAdjLink();
+
+		// create penalty of F and B
 		double [][] matrixF = image_seg.createMatrixPenaltyF();
 		double [][] matrixB = image_seg.createMatrixPenaltyB();
-		image_seg.Edmonds_Karp_Solve(fgout_pixel, bgout_pixel, img_pixel.length, img_pixel[0].length );
 
-		System.out.println("This is the adjency list");
-		image_seg.displayLinkedList(adj_link);
-		//System.out.println("This is the matrix of penalty F");
-		//image_seg.displayMatrix(matrixF);
-		//System.out.println("This is the matrix of penalty B");
-		//image_seg.displayMatrix(matrixB);
+		// this is the edmonds karp solver
+		image_seg.Edmonds_Karp_Solve(fgout_pixel, bgout_pixel, img_pixel.length, img_pixel[0].length, adj_link );
 
+		//System.out.println("This is the adjency list");
+		//image_seg.displayLinkedList(adj_link);
+
+		// write the picture into file
 		image_seg.writeImagePixels(args[3], fgout_pixel);
 		image_seg.writeImagePixels(args[4], bgout_pixel);
+		System.out.println("******************");
 	}
 }
-
-/* main() skeleton:
-
-usage: java segment img.png fgIn.png bgIn.png fgOut.png bgOut.png
-
-1) read images into img[][], fgIn[][] bgIn[][] from .png files;
-1a) all three images should have the same dimensions, imH * imW (determine what imH, imW is)
-1b) img[y][x] should be in range from 0 (black) to 255 (white)
-1c) fgIn[y][x] should have 255 (white) for "likely" foreground, 0 (black) for the rest (unknown status)
-1d) bgIn[y][x] should have 255 (white) for "likely" background, 0 (black) for the rest (unknown status)
-
-2) create a parameterization object based on the image, foreground, and background, and img dimensions, e.g.
-myParam=new SomeParametrization();myParam.initialize(img, imH, imW, fgIn, bgIn);
-
-3) use the solver (which is the main objective of this homework project) to obtain fgOut and bgOut, e.g.
-3a) allocate fgOut, bgOut 2D arrays (h x w)
-3b) call  solve(myParam,fgOut,bgOut,imH,imW);
-
-4) write fgOut bgOut to .png files
-
-
-*/
-
-/* solver skeleton:
-// designing and implementing the solver is the main objective of this project assignment!
-void solve(Parametrization params, int fgOut[][],int bgOut[][],int h, int w)
-1) use the input arguments (parametrization, h, w), to form a flow network (i.e. use penaltyF(), penaltyB(), penaltyP() as source of penalty values for each pixel or pixel pair
-2) solve the max flow/min cut problem by implementing e.g. Edmonds-Karp algorithm we covered in class
-3) recover the min cut from max flow solution, fill out the output arguments (fgOut and bgOut) based on it
-3a) fgOut[y][x] = 255 (white) if pixel (x,y) is in foreground, fgOut[y][x]=0 otherwise
-3b) bgOut[y][x] = 255 (white) if pixel (x,y) is in background, bgOut[y][x]=0 otherwise
-3c) in the output, you should always have: fgOut[y][x]+bgOut[y][x]==255  (every pixel is classified as either foreground or background)
-*/
