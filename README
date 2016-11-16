@@ -1,3 +1,9 @@
+/*
+ * Programmer: Dongwei Wang
+ * Date: Nov 16th, 2016
+ * Image segmentation with Edmonds Karp min cut/max flow algorithm
+ */
+
 Image Segmentation Algo Implementation
 
 1.  Image Read/Write
