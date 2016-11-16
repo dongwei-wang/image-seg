@@ -1,0 +1,21 @@
+Image Segmentation Algo Implementation
+
+1.  Image Read/Write
+	In this assignment, I use java ImageIO to read and write the images, and convert it into an two dimension  array. The value of original image for each pixel is in [0,255] since it is a grayscale image.
+After reading, I create the peanlty P(i,j) in adjacency list and penalty F and B in matrix. Matrix F and matrix B is pretty simple, just read the value from original foreground and background images, calculate it by the formula, and put the value in the corresponding position.
+In order to create the adjacency matrix, I add two nodes: source and sink. The source node connects with all the nodes in foreground, the sink node connects with the nodes in background. All the nodes in the image just connect with at most three neighbours in each direction(already do boundary check). We do Breadth First Search to get the shortest paths, delete the edge with minimum penalty in this path from the adjacency list, and adjust residual network until BFS can not find any shortest paths.
+
+2.  Program frame
+The frame of my main function includes:
+Image read
+Parameters initilization
+Create adjacency list and penalty matrix
+Edmonds_karp_solver which is the key function
+Write the image to folder
+
+3.  Run the program
+Just two simple steps can get the expected results:
+make
+sh run // run is a shell script
+make cleanlog // delete all generated logs
+The outputted images are stored in the directory output, I also generate five logs named with the five images which include the shortest path information to find the minimum cut.
